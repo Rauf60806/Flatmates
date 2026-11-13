@@ -1,0 +1,36 @@
+{
+  "hotspots": [
+    {
+      "label": "getSpendingStats()",
+      "risk": 0.62,
+      "type": "FUNCTION"
+    },
+    {
+      "label": "calculatePairwiseBalances()",
+      "risk": 0.347,
+      "type": "FUNCTION"
+    },
+    {
+      "label": "main()",
+      "risk": 0.247,
+      "type": "FUNCTION"
+    },
+    {
+      "label": "FlatmateCard()",
+      "risk": 0.224,
+      "type": "FUNCTION"
+    },
+    {
+      "label": "item.routes.ts",
+      "risk": 0.209,
+      "type": "FUNCTION"
+    }
+  ],
+  "blast_radius": {
+    "FlatmateCard()": 4,
+    "from": 4,
+    "useAuth()": 3,
+    "app": 2,
+    "COUNT": 2
+  }
+}

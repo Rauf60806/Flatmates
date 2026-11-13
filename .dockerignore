@@ -1,0 +1,10 @@
+node_modules
+.git
+*.log
+.env
+*.env
+client/dist
+server/dist
+coverage
+.DS_Store
+Thumbs.db
