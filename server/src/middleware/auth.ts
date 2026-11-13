@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { env } from '../config/env.js';
 import { prisma } from '../prisma.js';
+import { supabaseAdmin } from '../config/supabase.js';
 
 export interface AuthUserPayload {
   id: string;
@@ -23,26 +22,53 @@ export async function requireAuth(
   next: NextFunction
 ): Promise<void> {
   try {
-    const token = req.cookies?.token;
+    // Extract the Supabase access token from the Authorization header
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
+    if (!authHeader?.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
-        message: 'Authentication required. No session cookie found.',
+        message: 'Authentication required. No access token found.',
       });
       return;
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUserPayload;
+    const token = authHeader.split(' ')[1];
 
-    // Verify user is still active in database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
+    // Verify the token with Supabase
+    const { data: { user: supabaseUser }, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !supabaseUser) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired access token.',
+      });
+      return;
+    }
+
+    // Look up the user in our database by their Supabase ID
+    let user = await prisma.user.findUnique({
+      where: { supabaseId: supabaseUser.id },
       select: { id: true, email: true, role: true, active: true },
     });
 
+    // If not found by supabaseId, try by email (for migrated users)
+    if (!user && supabaseUser.email) {
+      user = await prisma.user.findUnique({
+        where: { email: supabaseUser.email },
+        select: { id: true, email: true, role: true, active: true },
+      });
+
+      // Link the Supabase ID to the existing user
+      if (user) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { supabaseId: supabaseUser.id },
+        });
+      }
+    }
+
     if (!user || !user.active) {
-      res.clearCookie('token');
       res.status(401).json({
         success: false,
         message: 'Account not found or has been deactivated.',
@@ -58,10 +84,9 @@ export async function requireAuth(
 
     next();
   } catch {
-    res.clearCookie('token');
     res.status(401).json({
       success: false,
-      message: 'Invalid or expired authentication session.',
+      message: 'Authentication failed.',
     });
   }
 }

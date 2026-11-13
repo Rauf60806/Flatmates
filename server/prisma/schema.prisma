@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -24,6 +25,7 @@ model User {
   passwordHash String
   role         Role          @default(member)
   active       Boolean       @default(true)
+  supabaseId   String?       @unique @map("supabase_id")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 

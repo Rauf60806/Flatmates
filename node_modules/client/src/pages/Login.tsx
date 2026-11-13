@@ -38,7 +38,7 @@ export const Login: React.FC = () => {
     try {
       await login(email.trim(), password);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Invalid email or password.';
+      const msg = err?.message || err?.response?.data?.message || 'Invalid email or password.';
       setError(msg);
     } finally {
       setIsSubmitting(false);

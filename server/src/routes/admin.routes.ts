@@ -1,9 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '../prisma.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
 
@@ -53,6 +53,8 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction): Promis
 
 /**
  * POST /api/admin/users
+ *
+ * Creates a user in both Supabase Auth and the app database.
  */
 router.post(
   '/',
@@ -73,16 +75,32 @@ router.post(
         return;
       }
 
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(temporaryPassword, salt);
+      // Create the user in Supabase Auth
+      const { data: supabaseData, error: supabaseError } =
+        await supabaseAdmin.auth.admin.createUser({
+          email: email.toLowerCase(),
+          password: temporaryPassword,
+          email_confirm: true, // Auto-confirm the email
+          user_metadata: { name },
+        });
 
+      if (supabaseError) {
+        res.status(400).json({
+          success: false,
+          message: `Supabase Auth error: ${supabaseError.message}`,
+        });
+        return;
+      }
+
+      // Create the user in our app database
       const user = await prisma.user.create({
         data: {
           name,
           email: email.toLowerCase(),
-          passwordHash,
+          passwordHash: '(managed-by-supabase)',
           role,
           active: true,
+          supabaseId: supabaseData.user.id,
         },
         select: {
           id: true,
@@ -126,9 +144,29 @@ router.patch(
       if (typeof active === 'boolean') updateData.active = active;
       if (name) updateData.name = name;
       if (role) updateData.role = role;
-      if (resetPassword) {
-        const salt = await bcrypt.genSalt(10);
-        updateData.passwordHash = await bcrypt.hash(resetPassword, salt);
+
+      // If resetting password, update it in Supabase Auth
+      if (resetPassword && user.supabaseId) {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(
+          user.supabaseId,
+          { password: resetPassword }
+        );
+
+        if (error) {
+          res.status(400).json({
+            success: false,
+            message: `Failed to reset password: ${error.message}`,
+          });
+          return;
+        }
+      }
+
+      // If deactivating, also ban them in Supabase Auth
+      if (typeof active === 'boolean' && user.supabaseId) {
+        await supabaseAdmin.auth.admin.updateUserById(
+          user.supabaseId,
+          { ban_duration: active ? 'none' : '876000h' } // ~100 years = effectively permanent
+        );
       }
 
       const updated = await prisma.user.update({
