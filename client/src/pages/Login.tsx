@@ -120,7 +120,7 @@ export const Login: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => handleFillDemo('alex@flatmates.local', 'DemoPassword123!')}
+                onClick={() => handleFillDemo('alex@flatmates.local', 'Password123!')}
                 className="px-3 py-2 text-left bg-gray-50 hover:bg-teal/5 hover:border-teal/30 border border-gray-200 rounded-xl transition-all"
               >
                 <p className="text-xs font-bold text-ink-light">Demo Flatmate</p>

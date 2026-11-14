@@ -1,14 +1,14 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Plus, Users, BarChart2, LogOut, Shield } from 'lucide-react';
+import { Home, Plus, Users, BarChart2, LogOut, Shield, LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getInitials, getAvatarColor } from '../../utils/format';
 import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface NavItem {
   to: string;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: LucideIcon;
   label: string;
   exact?: boolean;
   isAction?: boolean;

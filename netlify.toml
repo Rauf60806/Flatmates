@@ -1,0 +1,22 @@
+# Netlify configuration for Flatmates
+
+[build]
+  command = "npm run build"
+  publish = "client/dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["@prisma/client", ".prisma"]
+
+# API routes: forward /api/* to the Netlify serverless function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# SPA catch-all rule: routes all frontend navigation to index.html for React Router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

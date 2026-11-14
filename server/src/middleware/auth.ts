@@ -55,7 +55,7 @@ export async function requireAuth(
     // If not found by supabaseId, try by email (for migrated users)
     if (!user && supabaseUser.email) {
       user = await prisma.user.findUnique({
-        where: { email: supabaseUser.email },
+        where: { email: supabaseUser.email.toLowerCase() },
         select: { id: true, email: true, role: true, active: true },
       });
 
@@ -64,6 +64,19 @@ export async function requireAuth(
         await prisma.user.update({
           where: { id: user.id },
           data: { supabaseId: supabaseUser.id },
+        });
+      } else {
+        // Auto-provision user in app database if authenticated in Supabase
+        user = await prisma.user.create({
+          data: {
+            name: (supabaseUser.user_metadata?.name as string) || supabaseUser.email.split('@')[0],
+            email: supabaseUser.email.toLowerCase(),
+            passwordHash: '(managed-by-supabase)',
+            role: 'member',
+            active: true,
+            supabaseId: supabaseUser.id,
+          },
+          select: { id: true, email: true, role: true, active: true },
         });
       }
     }

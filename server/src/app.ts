@@ -34,7 +34,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Healthcheck endpoint
-app.get('/api/health', (_req, res) => {
+app.get(['/api/health', '/health'], (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -42,14 +42,14 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/items/suggestions', suggestionRoutes);
-app.use('/api/items', itemRoutes);
-app.use('/api/balances', balanceRoutes);
-app.use('/api/settlements', settlementRoutes);
-app.use('/api', statsRoutes);
+// API Routes (supports both direct /api/* prefix and serverless rewrites)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/admin', '/admin'], adminRoutes);
+app.use(['/api/items/suggestions', '/items/suggestions'], suggestionRoutes);
+app.use(['/api/items', '/items'], itemRoutes);
+app.use(['/api/balances', '/balances'], balanceRoutes);
+app.use(['/api/settlements', '/settlements'], settlementRoutes);
+app.use(['/api', '/'], statsRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

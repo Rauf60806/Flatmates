@@ -1,8 +1,42 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { calculateGroupSplit } from '../src/services/split.service.js';
+import { supabaseAdmin } from '../src/config/supabase.js';
 
 const prisma = new PrismaClient();
+
+async function ensureSupabaseUser(email: string, password: string, name: string): Promise<string | null> {
+  try {
+    const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+    const existing = listData?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+
+    if (existing) {
+      await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+        password,
+        email_confirm: true,
+        user_metadata: { name },
+      });
+      return existing.id;
+    }
+
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name },
+    });
+
+    if (error) {
+      console.warn(`Supabase user creation notice for ${email}:`, error.message);
+      return null;
+    }
+
+    return data.user.id;
+  } catch (err: any) {
+    console.warn(`Could not sync ${email} with Supabase:`, err?.message);
+    return null;
+  }
+}
 
 async function main() {
   console.log('--- Seeding Flatmates Demo Data ---');
@@ -17,7 +51,25 @@ async function main() {
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash(defaultPassword, salt);
 
-  // 1. Create 4 demo flatmates
+  // 1. Create admin user
+  const adminSupabaseId = await ensureSupabaseUser(
+    'admin@flatmates.local',
+    'AdminTemporaryPassword123!',
+    'Admin'
+  );
+  await prisma.user.create({
+    data: {
+      name: 'Admin',
+      email: 'admin@flatmates.local',
+      passwordHash: '(managed-by-supabase)',
+      role: 'admin',
+      active: true,
+      supabaseId: adminSupabaseId,
+    },
+  });
+
+  // 2. Create 4 demo flatmates
+  const alexSupabaseId = await ensureSupabaseUser('alex@flatmates.local', defaultPassword, 'Alex Rivera');
   const alex = await prisma.user.create({
     data: {
       name: 'Alex Rivera',
@@ -25,9 +77,11 @@ async function main() {
       passwordHash,
       role: 'admin',
       active: true,
+      supabaseId: alexSupabaseId,
     },
   });
 
+  const samSupabaseId = await ensureSupabaseUser('sam@flatmates.local', defaultPassword, 'Sam Chen');
   const sam = await prisma.user.create({
     data: {
       name: 'Sam Chen',
@@ -35,9 +89,11 @@ async function main() {
       passwordHash,
       role: 'member',
       active: true,
+      supabaseId: samSupabaseId,
     },
   });
 
+  const jordanSupabaseId = await ensureSupabaseUser('jordan@flatmates.local', defaultPassword, 'Jordan Lee');
   const jordan = await prisma.user.create({
     data: {
       name: 'Jordan Lee',
@@ -45,9 +101,11 @@ async function main() {
       passwordHash,
       role: 'member',
       active: true,
+      supabaseId: jordanSupabaseId,
     },
   });
 
+  const taylorSupabaseId = await ensureSupabaseUser('taylor@flatmates.local', defaultPassword, 'Taylor Swift');
   const taylor = await prisma.user.create({
     data: {
       name: 'Taylor Swift',
@@ -55,13 +113,14 @@ async function main() {
       passwordHash,
       role: 'member',
       active: true,
+      supabaseId: taylorSupabaseId,
     },
   });
 
   const allMembers = [alex, sam, jordan, taylor];
   const memberIds = allMembers.map((m) => m.id);
 
-  console.log('Created 4 flatmates (Alex, Sam, Jordan, Taylor).');
+  console.log('Created admin and 4 flatmates (Alex, Sam, Jordan, Taylor) synced with Supabase Auth.');
 
   // 2. Helper to record group items with exact remainder split
   const createGroupExpense = async (
