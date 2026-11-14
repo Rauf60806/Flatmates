@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Users, KeyRound, Sparkles } from 'lucide-react';
+import { Users, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -18,12 +18,6 @@ export const Login: React.FC = () => {
   if (!loading && user) {
     return <Navigate to={from} replace />;
   }
-
-  const handleFillDemo = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError('');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,29 +98,12 @@ export const Login: React.FC = () => {
             </Button>
           </form>
 
-          {/* Quick Demo Credentials Autofill Helper */}
+          {/* Account credentials info box */}
           <div className="mt-6 pt-5 border-t border-gray-100">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-teal" /> Quick Demo Accounts
+            <p className="text-xs font-semibold text-ink-light mb-1">Flatmate Accounts (Password: Password123!)</p>
+            <p className="text-[11px] text-ink-muted">
+              Rauf (Admin), Taz, Mamun, Milon, Miraj, Arefin (@flatmates.local)
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleFillDemo('admin@flatmates.local', 'AdminTemporaryPassword123!')}
-                className="px-3 py-2 text-left bg-gray-50 hover:bg-teal/5 hover:border-teal/30 border border-gray-200 rounded-xl transition-all"
-              >
-                <p className="text-xs font-bold text-ink-light">Admin</p>
-                <p className="text-[10px] text-ink-muted truncate">admin@flatmates.local</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFillDemo('alex@flatmates.local', 'Password123!')}
-                className="px-3 py-2 text-left bg-gray-50 hover:bg-teal/5 hover:border-teal/30 border border-gray-200 rounded-xl transition-all"
-              >
-                <p className="text-xs font-bold text-ink-light">Demo Flatmate</p>
-                <p className="text-[10px] text-ink-muted truncate">alex@flatmates.local</p>
-              </button>
-            </div>
           </div>
         </div>
 

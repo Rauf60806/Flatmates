@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Users, User, ArrowLeft } from 'lucide-react';
+import { Check, Users, User, ArrowLeft, Scale } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { SegmentedToggle } from '../components/ui/SegmentedToggle';
@@ -9,7 +9,7 @@ import { Stepper } from '../components/items/Stepper';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../utils/format';
 
-type ItemType = 'individual' | 'group';
+type ItemType = 'individual' | 'group' | 'owe';
 
 export const AddItem: React.FC = () => {
   const navigate = useNavigate();
@@ -82,11 +82,14 @@ export const AddItem: React.FC = () => {
     setSubmitError('');
 
     try {
+      // If type is 'owe', we can record it as group or custom split type (if backend supports group, owe is treated as group expense where you owe / settle)
+      const apiType = type === 'owe' ? 'group' : type;
+
       await api.post('/items', {
         name: name.trim(),
         price: priceInPaise,
         quantity,
-        type,
+        type: apiType,
       });
 
       setIsSuccess(true);
@@ -125,7 +128,11 @@ export const AddItem: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="text-sm text-ink-muted mt-1"
         >
-          {type === 'group' ? 'Split among all active flatmates.' : 'Added to your individual expenses.'}
+          {type === 'group'
+            ? 'Split equally among all active flatmates.'
+            : type === 'owe'
+            ? 'Recorded as an owe settlement / group share.'
+            : 'Added to your individual expenses.'}
         </motion.p>
       </div>
     );
@@ -144,13 +151,13 @@ export const AddItem: React.FC = () => {
         </Link>
         <div>
           <h2 className="text-2xl font-extrabold text-ink-light tracking-tight">Add Expense</h2>
-          <p className="text-xs sm:text-sm text-ink-muted mt-0.5">Record a new shared or individual item</p>
+          <p className="text-xs sm:text-sm text-ink-muted mt-0.5">Record a new shared, individual, or owe item</p>
         </div>
       </div>
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8">
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
-          {/* Type Toggle */}
+          {/* Type Toggle with Owe */}
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">Expense Type</p>
             <SegmentedToggle
@@ -159,7 +166,8 @@ export const AddItem: React.FC = () => {
               className="w-full"
               options={[
                 { value: 'group', label: 'Group Expense', icon: <Users className="w-4 h-4" /> },
-                { value: 'individual', label: 'Individual Expense', icon: <User className="w-4 h-4" /> },
+                { value: 'owe', label: 'Owe / Split', icon: <Scale className="w-4 h-4" /> },
+                { value: 'individual', label: 'Individual', icon: <User className="w-4 h-4" /> },
               ]}
             />
             <AnimatePresence>
@@ -171,6 +179,16 @@ export const AddItem: React.FC = () => {
                   className="text-xs text-teal mt-2 font-medium flex items-center gap-1.5"
                 >
                   <span>👥</span> Split equally among {activeCount} active flatmates
+                </motion.p>
+              )}
+              {type === 'owe' && (
+                <motion.p
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="text-xs text-amber-600 mt-2 font-medium flex items-center gap-1.5"
+                >
+                  <span>⚖️</span> Log who owes for this shared expense item
                 </motion.p>
               )}
             </AnimatePresence>
@@ -242,7 +260,7 @@ export const AddItem: React.FC = () => {
                     {formatCurrency(totalInPaise)}
                   </span>
                 </div>
-                {type === 'group' && activeCount > 0 && (
+                {(type === 'group' || type === 'owe') && activeCount > 0 && (
                   <div className="flex items-center justify-between pt-2.5 border-t border-teal/15">
                     <span className="text-xs text-ink-muted">Your estimated share ({activeCount} flatmates)</span>
                     <span className="text-sm font-bold tabular-nums text-ink-light">
